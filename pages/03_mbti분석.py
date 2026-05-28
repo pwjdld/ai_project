@@ -7,13 +7,12 @@ import numpy as np
 
 # 페이지 설정
 st.set_page_config(
-    page_title="MBTI Country Dashboard",
+    page_title="MBTI Top 10 Countries",
     layout="wide"
 )
 
-# 제목
-st.title("🌍 국가별 MBTI 비율 분석")
-st.write("국가를 선택하면 MBTI 16가지 유형 비율을 그래프로 보여줍니다.")
+st.title("🌍 MBTI 유형별 상위 10개 국가")
+st.write("MBTI 유형을 선택하면 해당 비율이 가장 높은 국가 10개를 보여줍니다.")
 
 # 데이터 불러오기
 @st.cache_data
@@ -22,55 +21,46 @@ def load_data():
 
 df = load_data()
 
-# 국가 선택
-country = st.selectbox(
-    "국가 선택",
-    sorted(df["Country"].unique())
-)
-
-# 선택 국가 데이터
-selected = df[df["Country"] == country].iloc[0]
-
-# MBTI 컬럼
-mbti_cols = [
+# MBTI 목록
+mbti_types = [
     'INFJ', 'ISFJ', 'INTP', 'ISFP',
     'ENTP', 'ISTP', 'INTJ', 'ESTP',
     'ENFJ', 'ESFJ', 'INFP', 'ESFP',
     'ENFP', 'ESTJ', 'ISTJ', 'ENTJ'
 ]
 
-# 값 추출
-values = selected[mbti_cols].astype(float)
+# MBTI 선택
+selected_mbti = st.selectbox(
+    "MBTI 유형 선택",
+    mbti_types
+)
 
-# 내림차순 정렬
-values = values.sort_values(ascending=False)
+# 상위 10개 국가 추출
+top10 = df[['Country', selected_mbti]] \
+    .sort_values(by=selected_mbti, ascending=False) \
+    .head(10)
 
 # 색상 설정
-colors = []
+colors = ['blue']
 
-# 초록색 그라데이션
-green_gradient = np.linspace(0.9, 0.3, len(values)-1)
+green_gradient = np.linspace(0.85, 0.35, 9)
 
-idx = 0
-for i, mbti in enumerate(values.index):
-    if i == 0:
-        colors.append("blue")
-    else:
-        colors.append((0, green_gradient[idx], 0))
-        idx += 1
+for g in green_gradient:
+    colors.append((0, g, 0))
 
 # 그래프 생성
 fig, ax = plt.subplots(figsize=(12, 6))
 
 bars = ax.bar(
-    values.index,
-    values.values,
+    top10['Country'],
+    top10[selected_mbti],
     color=colors
 )
 
 # 값 표시
-for bar in bars:
+for idx, bar in enumerate(bars):
     h = bar.get_height()
+
     ax.text(
         bar.get_x() + bar.get_width()/2,
         h + 0.002,
@@ -80,8 +70,12 @@ for bar in bars:
     )
 
 # 그래프 스타일
-ax.set_title(f"{country} MBTI 비율", fontsize=18)
-ax.set_xlabel("MBTI 유형")
+ax.set_title(
+    f"{selected_mbti} 비율이 가장 높은 국가 TOP 10",
+    fontsize=18
+)
+
+ax.set_xlabel("국가")
 ax.set_ylabel("비율")
 
 plt.xticks(rotation=45)
@@ -90,21 +84,22 @@ plt.tight_layout()
 # 출력
 st.pyplot(fig)
 
-# 최고 MBTI
-top_mbti = values.index[0]
-top_value = values.iloc[0]
+# 1위 국가 표시
+top_country = top10.iloc[0]['Country']
+top_value = top10.iloc[0][selected_mbti]
 
 st.success(
-    f"🏆 {country}에서 가장 높은 MBTI는 "
-    f"'{top_mbti}' ({top_value:.2%}) 입니다."
+    f"🏆 {selected_mbti} 비율 1위 국가는 "
+    f"'{top_country}' ({top_value:.2%}) 입니다."
 )
 
-# 데이터 테이블
-st.subheader("📋 MBTI 데이터")
+# 순위 테이블
+st.subheader("📋 순위표")
 
-table_df = pd.DataFrame({
-    "MBTI": values.index,
-    "비율": [f"{v:.2%}" for v in values.values]
+ranking_df = pd.DataFrame({
+    "순위": range(1, 11),
+    "국가": top10['Country'].values,
+    "비율": [f"{v:.2%}" for v in top10[selected_mbti].values]
 })
 
-st.dataframe(table_df, use_container_width=True)
+st.dataframe(ranking_df, use_container_width=True)
