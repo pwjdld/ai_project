@@ -1,2 +1,5 @@
 streamlit
 folium
+pandas
+matplotlib
+numpy
