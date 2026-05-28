@@ -33,20 +33,17 @@ mbti_cols = [
 ]
 
 # -----------------------------------
-# 메뉴 선택
+# 탭 생성
 # -----------------------------------
-menu = st.sidebar.radio(
-    "메뉴 선택",
-    [
-        "국가별 MBTI 분석",
-        "MBTI 유형별 TOP10 국가"
-    ]
-)
+tab1, tab2 = st.tabs([
+    "📊 국가별 MBTI 분석",
+    "🏆 MBTI 유형별 TOP10 국가"
+])
 
 # =========================================================
-# 1. 국가 선택 → MBTI 그래프
+# TAB 1 : 국가별 MBTI 분석
 # =========================================================
-if menu == "국가별 MBTI 분석":
+with tab1:
 
     st.header("📊 국가별 MBTI 비율")
 
@@ -108,7 +105,7 @@ if menu == "국가별 MBTI 분석":
             fontsize=9
         )
 
-    # 스타일
+    # 그래프 스타일
     ax.set_title(
         f"{country} MBTI 비율",
         fontsize=18
@@ -123,7 +120,7 @@ if menu == "국가별 MBTI 분석":
 
     st.pyplot(fig)
 
-    # 최고 MBTI
+    # 최고 MBTI 표시
     top_mbti = values.index[0]
     top_value = values.iloc[0]
 
@@ -146,9 +143,9 @@ if menu == "국가별 MBTI 분석":
     )
 
 # =========================================================
-# 2. MBTI 선택 → TOP10 국가
+# TAB 2 : MBTI 유형별 TOP10 국가
 # =========================================================
-elif menu == "MBTI 유형별 TOP10 국가":
+with tab2:
 
     st.header("🏆 MBTI 유형별 상위 10개 국가")
 
@@ -158,7 +155,7 @@ elif menu == "MBTI 유형별 TOP10 국가":
         mbti_cols
     )
 
-    # TOP10 추출
+    # TOP10 데이터
     top10 = df[['Country', selected_mbti]] \
         .sort_values(
             by=selected_mbti,
@@ -200,7 +197,7 @@ elif menu == "MBTI 유형별 TOP10 국가":
             fontsize=9
         )
 
-    # 스타일
+    # 그래프 스타일
     ax.set_title(
         f"{selected_mbti} 비율 TOP 10 국가",
         fontsize=18
@@ -224,7 +221,7 @@ elif menu == "MBTI 유형별 TOP10 국가":
         f"'{top_country}' ({top_value:.2%}) 입니다."
     )
 
-    # 테이블
+    # 순위표
     st.subheader("📋 순위표")
 
     ranking_df = pd.DataFrame({
