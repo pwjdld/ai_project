@@ -140,4 +140,3 @@ numpy
 4. GitHub 저장소 연결
 
 5. app.py 선택 후 Deploy
-
