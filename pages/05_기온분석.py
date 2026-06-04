@@ -9,16 +9,55 @@ st.set_page_config(
 
 st.title("🌡️ 서울 기온 분석")
 
+# -------------------
 # 데이터 불러오기
-df = pd.read_csv("seoul.csv", encoding="cp949")
+# -------------------
 
+try:
+    df = pd.read_csv("seoul.csv", encoding="cp949")
+except:
+    try:
+        df = pd.read_csv("seoul.csv", encoding="utf-8")
+    except:
+        df = pd.read_csv("seoul.csv", encoding="utf-8-sig")
+
+# 컬럼명 공백 제거
+df.columns = df.columns.str.strip()
+
+# -------------------
 # 날짜 변환
-df["날짜"] = pd.to_datetime(df["날짜"])
+# -------------------
 
-# 결측 제거
-df = df.dropna(subset=["최고기온(℃)", "최저기온(℃)"])
+df["날짜"] = pd.to_datetime(
+    df["날짜"],
+    errors="coerce"
+)
 
+# 날짜 변환 실패 행 제거
+df = df.dropna(subset=["날짜"])
+
+# 기온 데이터 숫자 변환
+df["최고기온(℃)"] = pd.to_numeric(
+    df["최고기온(℃)"],
+    errors="coerce"
+)
+
+df["최저기온(℃)"] = pd.to_numeric(
+    df["최저기온(℃)"],
+    errors="coerce"
+)
+
+df = df.dropna(
+    subset=["최고기온(℃)", "최저기온(℃)"]
+)
+
+# 날짜 정렬
+df = df.sort_values("날짜")
+
+# -------------------
 # 날짜 선택
+# -------------------
+
 selected_date = st.date_input(
     "날짜를 선택하세요",
     value=df["날짜"].max().date(),
@@ -26,20 +65,36 @@ selected_date = st.date_input(
     max_value=df["날짜"].max().date()
 )
 
-selected_date = pd.to_datetime(selected_date)
+selected_date = pd.Timestamp(selected_date)
 
-# 선택한 날짜가 존재하는지 확인
+# 선택 날짜 확인
 if selected_date not in df["날짜"].values:
-    st.warning("선택한 날짜의 데이터가 없습니다.")
-    st.stop()
 
-# 선택한 날짜의 연도 추출
+    nearest_idx = (
+        df["날짜"] - selected_date
+    ).abs().idxmin()
+
+    selected_row = df.loc[nearest_idx]
+    selected_date = selected_row["날짜"]
+
+    st.warning(
+        f"선택 날짜 데이터가 없어 가장 가까운 날짜({selected_date.date()})를 표시합니다."
+    )
+
+# 선택 연도
 selected_year = selected_date.year
 
-year_df = df[df["날짜"].dt.year == selected_year]
+year_df = df[
+    df["날짜"].dt.year == selected_year
+]
 
-# 선택한 날짜 데이터
-selected_row = year_df[year_df["날짜"] == selected_date]
+selected_row = year_df[
+    year_df["날짜"] == selected_date
+]
+
+# -------------------
+# 정보 표시
+# -------------------
 
 st.subheader(f"📅 {selected_year}년 기온 변화")
 
@@ -48,16 +103,19 @@ col1, col2 = st.columns(2)
 with col1:
     st.metric(
         "최고기온",
-        f"{selected_row['최고기온(℃)'].iloc[0]:.1f} ℃"
+        f"{selected_row['최고기온(℃)'].iloc[0]:.1f}℃"
     )
 
 with col2:
     st.metric(
         "최저기온",
-        f"{selected_row['최저기온(℃)'].iloc[0]:.1f} ℃"
+        f"{selected_row['최저기온(℃)'].iloc[0]:.1f}℃"
     )
 
-# 그래프 생성
+# -------------------
+# 그래프
+# -------------------
+
 fig = go.Figure()
 
 # 최고기온 (초록색)
@@ -67,7 +125,10 @@ fig.add_trace(
         y=year_df["최고기온(℃)"],
         mode="lines",
         name="최고기온",
-        line=dict(color="green", width=3)
+        line=dict(
+            color="green",
+            width=3
+        )
     )
 )
 
@@ -78,38 +139,45 @@ fig.add_trace(
         y=year_df["최저기온(℃)"],
         mode="lines",
         name="최저기온",
-        line=dict(color="lightskyblue", width=3)
+        line=dict(
+            color="lightskyblue",
+            width=3
+        )
     )
 )
 
-# 선택 날짜 강조
+# 선택 날짜 최고기온
 fig.add_trace(
     go.Scatter(
         x=[selected_date],
         y=[selected_row["최고기온(℃)"].iloc[0]],
         mode="markers",
-        marker=dict(size=12),
-        name="선택일 최고기온"
+        name="선택일 최고기온",
+        marker=dict(size=12)
     )
 )
 
+# 선택 날짜 최저기온
 fig.add_trace(
     go.Scatter(
         x=[selected_date],
         y=[selected_row["최저기온(℃)"].iloc[0]],
         mode="markers",
-        marker=dict(size=12),
-        name="선택일 최저기온"
+        name="선택일 최저기온",
+        marker=dict(size=12)
     )
 )
 
 fig.update_layout(
     height=650,
-    xaxis_title="날짜",
-    yaxis_title="기온 (℃)",
     hovermode="x unified",
-    legend_title="범례",
-    template="plotly_white"
+    template="plotly_white",
+    xaxis_title="날짜",
+    yaxis_title="기온(℃)",
+    legend_title="범례"
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(
+    fig,
+    use_container_width=True
+)
