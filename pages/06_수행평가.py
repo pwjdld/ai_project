@@ -25,7 +25,6 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 csv_files = {}
 
 for year in [2015, 2016, 2017, 2018, 2019]:
-
     matches = list(ROOT_DIR.rglob(f"{year}.csv"))
 
     if matches:
@@ -36,7 +35,7 @@ if len(csv_files) == 0:
     st.stop()
 
 # --------------------------------------------------
-# 데이터 로드
+# 데이터 불러오기
 # --------------------------------------------------
 
 all_data = []
@@ -60,11 +59,7 @@ for year, file_path in csv_files.items():
 
         temp = df[[country_col, rank_col]].copy()
 
-        temp.columns = [
-            "Country",
-            "Rank"
-        ]
-
+        temp.columns = ["Country", "Rank"]
         temp["Year"] = year
 
         all_data.append(temp)
@@ -72,29 +67,35 @@ for year, file_path in csv_files.items():
 data = pd.concat(all_data, ignore_index=True)
 
 # --------------------------------------------------
-# 사이드바
+# 본문 선택 박스
 # --------------------------------------------------
 
-st.sidebar.header("설정")
+st.subheader("🔎 분석 조건 선택")
 
-selected_country = st.sidebar.selectbox(
-    "국가 선택",
-    sorted(data["Country"].unique())
-)
+col1, col2 = st.columns(2)
 
-selected_year = st.sidebar.selectbox(
-    "연도 선택",
-    sorted(data["Year"].unique())
-)
+with col1:
+    selected_country = st.selectbox(
+        "국가 선택",
+        sorted(data["Country"].unique())
+    )
+
+with col2:
+    selected_year = st.selectbox(
+        "연도 선택",
+        sorted(data["Year"].unique())
+    )
 
 # --------------------------------------------------
-# 국가별 순위 변화
+# 국가별 순위 변화 그래프
 # --------------------------------------------------
 
 country_data = (
     data[data["Country"] == selected_country]
     .sort_values("Year")
 )
+
+st.divider()
 
 st.header(f"📈 {selected_country} 행복 순위 변화")
 
@@ -104,14 +105,16 @@ fig.add_trace(
     go.Scatter(
         x=country_data["Year"],
         y=country_data["Rank"],
-        mode="lines+markers",
+        mode="lines+markers+text",
+        text=country_data["Rank"],
+        textposition="top center",
         line=dict(
             color="skyblue",
             width=4
         ),
         marker=dict(
-            color="skyblue",
-            size=10
+            size=10,
+            color="skyblue"
         ),
         name="행복 순위"
     )
@@ -121,12 +124,12 @@ fig.update_layout(
     plot_bgcolor="#f5f5f5",
     paper_bgcolor="#f5f5f5",
     xaxis_title="연도",
-    yaxis_title="순위",
+    yaxis_title="세계 행복 순위",
     height=600,
     font=dict(size=15)
 )
 
-# 1위가 위에 오도록
+# 순위는 낮을수록 좋으므로 반전
 fig.update_yaxes(
     autorange="reversed"
 )
@@ -137,7 +140,7 @@ st.plotly_chart(
 )
 
 # --------------------------------------------------
-# 선택 국가 데이터
+# 연도별 순위 표
 # --------------------------------------------------
 
 st.subheader("📋 연도별 순위")
@@ -149,14 +152,14 @@ st.dataframe(
 )
 
 # --------------------------------------------------
-# 세계 순위 TOP 10 / 최하위 10
+# 선택 연도 TOP10 / 최하위10
 # --------------------------------------------------
 
 st.divider()
 
 st.header(f"🌎 {selected_year} 세계 행복 순위")
 
-year_data = data[data["Year"] == selected_year].copy()
+year_data = data[data["Year"] == selected_year]
 
 top10 = (
     year_data
@@ -165,7 +168,7 @@ top10 = (
     .reset_index(drop=True)
 )
 
-top10.index = top10.index + 1
+top10.index += 1
 
 bottom10 = (
     year_data
@@ -174,35 +177,31 @@ bottom10 = (
     .reset_index(drop=True)
 )
 
-bottom10.index = bottom10.index + 1
+bottom10.index += 1
 
 col1, col2 = st.columns(2)
 
 with col1:
-
-    st.subheader("🏆 TOP 10 국가")
-
+    st.subheader("🏆 행복한 국가 TOP 10")
     st.dataframe(
         top10[["Country", "Rank"]],
         use_container_width=True
     )
 
 with col2:
-
-    st.subheader("📉 최하위 10개국")
-
+    st.subheader("📉 행복 순위 최하위 10개국")
     st.dataframe(
         bottom10[["Country", "Rank"]],
         use_container_width=True
     )
 
 # --------------------------------------------------
-# 통계 정보
+# 선택 국가 통계
 # --------------------------------------------------
 
 st.divider()
 
-st.header("📊 선택 국가 통계")
+st.header(f"📊 {selected_country} 통계")
 
 best_rank = int(country_data["Rank"].min())
 worst_rank = int(country_data["Rank"].max())
@@ -220,3 +219,12 @@ with col2:
         "최저 순위",
         f"{worst_rank}위"
     )
+
+# --------------------------------------------------
+# 선택 연도 국가 수
+# --------------------------------------------------
+
+st.metric(
+    f"{selected_year}년 조사 국가 수",
+    f"{len(year_data)}개국"
+)
